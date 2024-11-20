@@ -45,7 +45,7 @@ data['Fare'] = data['Fare'].fillna(data['Fare'].mean())
 # Convertir la columna 'Sex' en valores numéricos
 data['Sex'] = data['Sex'].map({'male': 0, 'female': 1})
 
-# Seleccionar características (x) y la clase (y)
+
 x = data[['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare']].values
 y = data['Survived'].values
 
@@ -56,7 +56,7 @@ np.random.shuffle(indices)   # Barajar los índices
 x = x[indices]  # Reordenar las características según los índices barajados
 y = y[indices]  # Reordenar las etiquetas según los índices barajados
 
-# Dividir los datos manualmente en entrenamiento y prueba (80% - 20%)
+
 train_size = int(len(x) * 0.8)  # Calcular el tamaño del conjunto de entrenamiento
 x_train, x_test = x[:train_size], x[train_size:]  # División de x
 y_train, y_test = y[:train_size], y[train_size:]  # División de y
