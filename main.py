@@ -1,89 +1,78 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-# Función para aplicar la sigmoide
-def sigmoid(z):
-    return 1 / (1 + np.exp(-z))
-
-# Función para entrenar una regresión logística
-def train_logistic_regression(x, y, lr=0.01, epochs=1000):
-    m, n = x.shape
-    weights = np.zeros(n)  # Inicializar pesos
-    bias = 0  # Inicializar sesgo
-
-    for _ in range(epochs):
-        # Predicción
-        linear_model = np.dot(x, weights) + bias
-        predictions = sigmoid(linear_model)
-
-        # Gradientes
-        dw = (1 / m) * np.dot(x.T, (predictions - y))
-        db = (1 / m) * np.sum(predictions - y)
-
-        # Actualizar pesos y sesgo
-        weights -= lr * dw
-        bias -= lr * db
-
-    return weights, bias
-
-# Función para realizar predicciones
-def predict(x, weights, bias, threshold=0.5):
-    linear_model = np.dot(x, weights) + bias
-    probabilities = sigmoid(linear_model)
-    return (probabilities >= threshold).astype(int)
-
-# Cargar el archivo CSV
-data = pd.read_csv('train.csv')
-
-# Seleccionar columnas relevantes y manejar valores faltantes
-data = data[['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Survived']]
-
-# Rellenar valores faltantes con la media
-data['Age'] = data['Age'].fillna(data['Age'].mean())
-data['Fare'] = data['Fare'].fillna(data['Fare'].mean())
-
-# Convertir la columna 'Sex' en valores numéricos
-data['Sex'] = data['Sex'].map({'male': 0, 'female': 1})
+# Cargar el archivo .csv con pandas
+datos = pd.read_csv('train.csv')
 
 
-x = data[['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare']].values
-y = data['Survived'].values
+# Procesamiento de los datos
+def procesar_datos(df):
+    caracteristicas = ['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']
+    objetivo = 'Survived'
 
-# Mezclar los datos de forma aleatoria
-indices = np.arange(len(x))  # Crear un arreglo con los índices
-np.random.shuffle(indices)   # Barajar los índices
+    # Codificar la columna 'Sex' (male = 0, female = 1)
+    df['Sex'] = df['Sex'].map({'male': 0, 'female': 1})
 
-x = x[indices]  # Reordenar las características según los índices barajados
-y = y[indices]  # Reordenar las etiquetas según los índices barajados
+    # Codificar la columna 'Embarked' (C = 0, Q = 1, S = 2)
+    df['Embarked'] = df['Embarked'].map({'C': 0, 'Q': 1, 'S': 2})
 
+    # Imputar valores faltantes en 'Age' y 'Fare' con la media de la columna
+    df['Age'] = df['Age'].fillna(df['Age'].mean())
+    df['Fare'] = df['Fare'].fillna(df['Fare'].mean())
 
-train_size = int(len(x) * 0.8)  # Calcular el tamaño del conjunto de entrenamiento
-x_train, x_test = x[:train_size], x[train_size:]  # División de x
-y_train, y_test = y[:train_size], y[train_size:]  # División de y
+    # Selección de las características (X) y la etiqueta (y)
+    X = df[caracteristicas].values
+    y = df[objetivo].values
 
-# Entrenar el modelo de regresión logística
-weights, bias = train_logistic_regression(x_train, y_train, lr=0.01, epochs=5000)
-
-# Probar el modelo con los datos de prueba
-y_pred = predict(x_test, weights, bias)
-
-# Calcular precisión usando las predicciones
-accuracy = np.mean(y_pred == y_test)
-print(f"Precisión del modelo: {accuracy * 100:.2f}%")
-
-# Mostrar bloques de datos y predicciones
-print("\nDatos de prueba (x_test):")
-print(x_test[:5])  # Mostrar las primeras 5 filas de x_test
-
-print("\nValores reales (y_test):")
-print(y_test)  # Mostrar los primeros 5 valores reales
-
-print("\nPredicciones del modelo (y_pred):")
-print(y_pred)  # Mostrar las primeras 5 predicciones
+    return X, y
 
 
-print("\nValores reales(Primeras 10 muestras) (y_test):")
-print(y_test[:10])  # Mostrar los primeros 5 valores reales
+# Implementación de KNN
+def predecir_knn(X_entrenamiento, y_entrenamiento, X_prueba, k=3):
+    distancias = np.sqrt(((X_entrenamiento - X_prueba) ** 2).sum(axis=1))  # Calcula la distancia euclidiana
+    indices_ordenados = np.argsort(distancias)  # Ordena los índices según la distancia
+    etiquetas_vecinos = y_entrenamiento[indices_ordenados[:k]]  # Obtiene las etiquetas de los k vecinos más cercanos
+    prediccion = np.bincount(etiquetas_vecinos).argmax()  # Predicción basada en la mayoría
+    return prediccion
 
-print("\nPredicciones del modelo(Primeras 10 muestras) (y_pred):")
-print(y_pred[:10])  # Mostrar las primeras 5 predicciones
+# Solicitar datos al usuario
+def obtener_datos_usuario():
+    print("Introduce los siguientes datos para predecir si el pasajero estaría vivo o muerto.")
+    pclass = int(input("Pclass (1, 2, 3): "))
+    sexo = input("Sexo (male/female): ").strip().lower()
+    sexo = 0 if sexo == "male" else 1
+    edad = float(input("Edad: "))
+    sibsp = int(input("Número de hermanos/esposos a bordo: "))
+    parch = int(input("Número de padres/hijos a bordo: "))
+    tarifa = float(input("Tarifa pagada: "))
+    embarque = input("Puerto de embarque (C, Q, S): ").strip().upper()
+    embarque = {'C': 0, 'Q': 1, 'S': 2}.get(embarque, 2)  # Asigna el valor correspondiente
+
+    return np.array([[pclass, sexo, edad, sibsp, parch, tarifa, embarque]])
+
+
+# Predecir usando el modelo KNN
+def hacer_prediccion():
+    # Pedir los datos del usuario
+    datos_usuario = obtener_datos_usuario()
+
+    # Usar los primeros 80% de los datos para entrenamiento y el 20% para pruebas
+    indice_division = int(0.8 * len(X))
+    X_entrenamiento, y_entrenamiento = X[:indice_division], y[:indice_division]
+
+    # Realizar la predicción usando KNN
+    prediccion = predecir_knn(X_entrenamiento, y_entrenamiento, datos_usuario[0])
+
+    # Mostrar el resultado
+    if prediccion == 1:
+        print("El pasajero estaría vivo.")
+    else:
+        print("El pasajero estaría muerto.")
+
+
+
+# Procesar los datos de entrenamiento
+X, y = procesar_datos(datos)
+
+#Hacer prediccion
+hacer_prediccion()
