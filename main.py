@@ -5,6 +5,8 @@ import pandas as pd
 datos = pd.read_csv('train.csv')
 
 
+print(datos.keys())
+
 # Procesamiento de los datos
 def procesar_datos(df):
     caracteristicas = ['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']
@@ -27,13 +29,40 @@ def procesar_datos(df):
     return X, y
 
 
+# QuickSort
+def quicksort_indices(distancias, indices):
+    if len(distancias) <= 1:
+        return distancias, indices
+    else:
+        pivot = distancias[-1]
+        left = []
+        right = []
+        left_indices = []
+        right_indices = []
+
+        for i in range(len(distancias) - 1):
+            if distancias[i] <= pivot:
+                left.append(distancias[i])
+                left_indices.append(indices[i])
+            else:
+                right.append(distancias[i])
+                right_indices.append(indices[i])
+
+        sorted_left, sorted_left_indices = quicksort_indices(left, left_indices)
+        sorted_right, sorted_right_indices = quicksort_indices(right, right_indices)
+
+        return sorted_left + [pivot] + sorted_right, sorted_left_indices + [indices[-1]] + sorted_right_indices
+
+
 # Implementación de KNN
 def predecir_knn(X_entrenamiento, y_entrenamiento, X_prueba, k=3):
     distancias = np.sqrt(((X_entrenamiento - X_prueba) ** 2).sum(axis=1))  # Calcula la distancia euclidiana
-    indices_ordenados = np.argsort(distancias)  # Ordena los índices según la distancia
+    indices = np.arange(len(distancias))
+    distancias_ordenadas, indices_ordenados = quicksort_indices(distancias, indices)  # Ordenamos las distancias y obtenemos los índices
     etiquetas_vecinos = y_entrenamiento[indices_ordenados[:k]]  # Obtiene las etiquetas de los k vecinos más cercanos
-    prediccion = np.bincount(etiquetas_vecinos).argmax()  # Predicción basada en la mayoría
+    prediccion = np.bincount(etiquetas_vecinos).argmax()
     return prediccion
+
 
 # Solicitar datos al usuario
 def obtener_datos_usuario():
@@ -68,7 +97,6 @@ def hacer_prediccion():
         print("El pasajero estaría vivo.")
     else:
         print("El pasajero estaría muerto.")
-
 
 
 # Procesar los datos de entrenamiento
